@@ -1,4 +1,5 @@
 ﻿using API.Context;
+using API.Migrations;
 using API.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,19 +18,21 @@ namespace API.Controllers
         }
 
         [HttpPost("Register")]
-        public async Task<ActionResult<User>> Register(Register register)
+        public async Task<ActionResult<UserDetails>> Register(Register register)
         {
             var user = new User();
             user.UserId = Guid.NewGuid().ToString();
             user.UserName = register.UserName;
             user.Email = register.Email;
-
+            var userFromDb = await _dbContext.users.SingleOrDefaultAsync(x => x.UserName == register.UserName);
+            if (userFromDb != null) return Unauthorized("Username Already Exists");
             using var hmac = new HMACSHA512();
             user.PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(register.Password));
             user.PasswordSalt = hmac.Key;
             _dbContext.Add(user);
             await _dbContext.SaveChangesAsync();
-            return new User
+            HttpContext.Session.SetString("UserId", user.UserId);
+            return new UserDetails
             {
                 UserId = user.UserId,
                 UserName = user.UserName,
@@ -38,7 +41,7 @@ namespace API.Controllers
             };
         }
         [HttpPost("Login")]
-        public async Task<ActionResult<User>> Login(Login login)
+        public async Task<ActionResult<UserDetails>> Login(Login login)
         {
             var user = await _dbContext.users.SingleOrDefaultAsync(x => x.UserName == login.UserName);
             if (user==null) return Unauthorized("Incorrect Username");
@@ -49,13 +52,20 @@ namespace API.Controllers
             {
                 if (user.PasswordHash[i] != computedPass[i]) return Unauthorized("Incorrect Password");
             }
-            return new User
+            HttpContext.Session.SetString("UserId", user.UserId);
+
+            return new UserDetails
             {
-                UserId = user.UserId,
+                UserId = HttpContext.Session.GetString("UserId"),
                 UserName = user.UserName,
                 Email = user.Email,
 
             };
+        }
+        [HttpGet("Logout")]
+        public async Task<IActionResult> Logout() {
+            HttpContext.Session.Clear();
+            return Ok(new { Logout = true });
         }
     }
 }
