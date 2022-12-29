@@ -16,31 +16,56 @@ namespace API.Controllers
             _dbContext = dbContext;
         }
         [HttpPost("AddTodo")]
-        public async Task<ActionResult<Todos>> AddTodo(Todos todos)
+        public async Task<ActionResult<AddTodo>> AddTodo(AddTodo todos)
         {
             var todoTodb = new TodoData();
-            todoTodb.Todo = todos.Todo;
-            todoTodb.Status = todos.Status;
-            todoTodb.UserId = HttpContext.Session.GetString("UserId");
+            todoTodb.UserId = todos.userId;
+
+            //if (todoTodb.UserId == null) return BadRequest("Please Login First");
+            todoTodb.TodoHeader = todos.TodoHeader;
+            todoTodb.TodoContent = todos.TodoContent;
+            todoTodb.Status = false; //pending
 
             await _dbContext.AddAsync(todoTodb);
             _dbContext.SaveChanges();
-            return new Todos
+            return new AddTodo
             {
-                Todo = todoTodb.Todo,
+                TodoHeader = todoTodb.TodoHeader,
+                TodoContent = todoTodb.TodoContent,
                 Status = todos.Status
             };
         }
 
         [HttpPost("GetTodo")]
-        public async Task<ActionResult<List<TodoData>>> GetTodo(string UserId)
+        public async Task<ActionResult<List<TodoData>>> GetTodo([FromBody] string UserId)
         {
             List<TodoData> todoFromDb = await _dbContext.TodoDatas.Where(x => x.UserId == UserId).ToListAsync();
 
-            if (todoFromDb == null) return Ok("No Todo Found");
+            if (todoFromDb == null) return BadRequest("No Todo Found");
 
 
             return todoFromDb;
+        }
+        [HttpPost("DeleteTodo")]
+        public async Task<IActionResult> DeleteTodo(DeleteTodo deleteTodo)
+        {
+            var todoFromDb = await _dbContext.TodoDatas.Where(x => x.UserId == deleteTodo.UserId && x.Id == deleteTodo.Id).FirstOrDefaultAsync();
+            if (todoFromDb == null) return BadRequest("Todo Not Found");
+
+            _dbContext.TodoDatas.Remove(todoFromDb);
+            _dbContext.SaveChanges();
+            return Ok();
+        }
+        [HttpPost("UpdateStatusTodo")]
+        public async Task<IActionResult> UpdateStatusTodo(UpdateStatusTodo updateStatusTodo)
+        {
+            TodoData todoFromDb = await _dbContext.TodoDatas.Where(x => x.UserId == updateStatusTodo.UserId && x.Id == updateStatusTodo.Id).FirstOrDefaultAsync();
+            if (todoFromDb == null) return BadRequest("Todo Not Found");
+
+            todoFromDb.Status = !updateStatusTodo.UpdateStatus;
+            _dbContext.TodoDatas.Update(todoFromDb);
+            _dbContext.SaveChanges();
+            return Ok();
         }
     }
 }

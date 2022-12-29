@@ -8,8 +8,9 @@ namespace API.Entities
         [Key]
         public int Id { get; set; }
         public string UserId { get; set; }
-        public string Todo { get; set; }
-        public string Status { get; set; }
+        public string TodoHeader { get; set; }
+        public string? TodoContent { get; set; }
+        public bool Status { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.Now;
     }
 }

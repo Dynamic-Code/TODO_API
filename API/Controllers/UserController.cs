@@ -31,7 +31,7 @@ namespace API.Controllers
             user.PasswordSalt = hmac.Key;
             _dbContext.Add(user);
             await _dbContext.SaveChangesAsync();
-            HttpContext.Session.SetString("UserId", user.UserId);
+            //HttpContext.Session.SetString("UserId", user.UserId);
             return new UserDetails
             {
                 UserId = user.UserId,
@@ -52,11 +52,11 @@ namespace API.Controllers
             {
                 if (user.PasswordHash[i] != computedPass[i]) return Unauthorized("Incorrect Password");
             }
-            HttpContext.Session.SetString("UserId", user.UserId);
+            //HttpContext.Session.SetString("UserId", user.UserId);
 
             return new UserDetails
             {
-                UserId = HttpContext.Session.GetString("UserId"),
+                UserId = user.UserId,
                 UserName = user.UserName,
                 Email = user.Email,
 
